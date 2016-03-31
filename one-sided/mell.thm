@@ -163,42 +163,48 @@ Set subgoals off.
 Define incl : olist -> olist -> prop by
   incl J L := exists K, merge J K L.
 
-Theorem cut_admit : forall A B JJ J QJ KK K QK LL,
-  dual A B ->
-  adj JJ A J -> mell QJ J ->
-  adj KK B K -> mell QK K ->
-  merge JJ KK LL ->
-  incl QJ QK ->
-  mell QK LL.
-IHrk : induction on 1.
-IHht : induction on 3.
-intros.
-Hqc : assert 0 forall QK QQ K,
-  JJ = nil ->
-  adj QK B QQ -> mell QQ K ->
-  incl QJ QK ->
-  mell QK K.
-  IHqc : induction on 3. intros. case H8. case H10.
-    search.
-    apply IHqc to _ H9 *H15 H11.
-     apply IHqc to _ H9 *H17 H11.
+Theorem cut_admit :
+  (forall A B JJ J QJ KK K QK LL,
+     dual A B ->
+     adj JJ A J -> mell QJ J ->
+     adj KK B K -> mell QK K ->
+     merge JJ KK LL ->
+     incl QJ QK ->
+     mell QK LL)
+/\
+  (forall A B QJ QK K QQ,
+     dual A B ->
+     mell QJ (A :: nil) ->
+     adj QK B QQ -> mell QQ K ->
+     incl QJ QK ->
+     mell QK K).
+IHrk1 : induction on 1 1.
+IHht1 : induction on 3 2.
+IHqc1 : induction on 5 4.
+split.
+
+%% linear cuts
+skip.
+
+%% unbounded cuts
+intros. case H4.
+  search.
+  apply IHqc2 to H1 H2 H3 *H9 H5.
+   apply IHqc2 to H1 H2 H3 *H11 H5.
+   search.
+  search.
+  apply IHqc2 to H1 H2 H3 *H9 H5.
+   search.
+  apply IHqc2 to H1 H2 H3 *H7 H5.
+   search.
+  apply IHqc2 to H1 H2 H3 *H6 H5.
+   search.
+  apply adj_swap to *H3 *H7.
+   assert 0 incl QJ U.
+     case H5. apply adj_2_is_o to H9. apply merge_2_is_list to H11.
      search.
-    search.
-    apply IHqc to _ H9 *H15 H11. search.
-    apply IHqc to _ H9 *H13 H11. search.
-    apply IHqc to _ H9 *H12 H11. search.
-    apply adj_swap to *H9 *H13.
-     assert 0 incl QJ U.
-       case H11.
-       apply adj_2_is_o to H15. apply merge_2_is_list to H17.
-       apply adj_exists to *H18 *H19.
-       search.
-     apply IHqc to _ H16 *H14 H17.
-     search.
-    apply adj_same_result_diff to H9 H12. case H15.
-      assert 0 incl QJ QK2.
-        case H11. apply perm_merge_3 to *H17 *H16. search.
-       apply IHqc to _ H12 *H14 H17.
-       
+   apply IHqc2 to H1 H2 H10 *H8 H11.
+   search.
+  apply adj_same_result_diff to H3 H6. case H9.
+    apply IHqc2 to H1 H2 H3 *H8 H5.
 abort.
-%       backchain mell_perm_q with QK = QK1. search.

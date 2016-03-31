@@ -1,0 +1,270 @@
+Kind atm type.
+
+Type a, b, c, d, e, f atm.
+
+%% We reuse the o type to define LL formulas
+Type atom, natom   atm -> o.
+Type tens, par     o -> o -> o.
+Type one, bot      o.
+Type bang, qm      o -> o.
+
+Define is_fm : o -> prop by
+; is_fm (atom A)
+; is_fm (natom A)
+; is_fm (tens A B) := is_fm A /\ is_fm B
+; is_fm (par A B) := is_fm A /\ is_fm B
+; is_fm one
+; is_fm bot
+; is_fm (bang A) := is_fm A
+; is_fm (qm A) := is_fm A
+.
+
+Define dual : o -> o -> prop by
+; dual (atom A) (natom A)
+; dual (tens A B) (par AA BB) := dual A AA /\ dual B BB
+; dual one bot
+; dual (bang A) (qm AA) := dual AA A
+.
+
+Theorem dual_is : forall A B, dual A B -> is_fm A /\ is_fm B.
+induction on 1. intros. case H1.
+  search.
+  apply IH to *H2. apply IH to *H3. search.
+  search.
+  apply IH to *H2. search.
+
+Import "../lib/merge" with is_o := is_fm.
+
+Kind nat type.
+
+Import "../lib/nat".
+
+Kind flav type.
+Type cf, lc flav.
+
+Define mell : flav -> nat -> olist -> olist -> prop by
+%% 1
+; mell FV (s X) QL L :=
+    is_nat X /\ is_list QL /\
+    exists A, adj (natom A :: nil) (atom A) L
+
+%% 2
+; mell FV (s X) QL L :=
+    exists A B LL, adj LL (tens A B) L /\
+    exists JJ KK, merge JJ KK LL /\
+      (exists J, adj JJ A J /\ mell FV X QL J) /\
+      (exists K, adj KK B K /\ mell FV X QL K)
+
+%% 3
+; mell FV (s X) QL (one :: nil) := is_nat X /\ is_list QL
+
+%% 4
+; mell FV (s X) QL L :=
+    exists A B LL, adj LL (par A B) L /\
+    exists J, adj LL A J /\
+    exists K, adj J B K /\
+    mell FV X QL K
+
+%% 5
+; mell FV (s X) QL L :=
+    exists LL, adj LL bot L /\
+    mell FV X QL LL
+
+%% 6
+; mell FV (s X) QL (bang A :: nil) :=
+    mell FV X QL (A :: nil)
+
+%% 7
+; mell FV (s X) QL L :=
+    exists A LL, adj LL (qm A) L /\
+    exists QK, adj QL A QK /\
+    mell FV X QK LL
+
+%% 8
+; mell FV (s X) QL L :=
+    exists A QK, adj QK A QL /\
+    exists J, adj L A J /\
+    mell FV X QL J
+
+%% 9
+; mell lc (s X) QL L :=
+    exists JJ KK, merge JJ KK L /\
+    exists A B, dual A B /\
+    exists J, adj JJ A J /\
+    exists K, adj KK A K /\
+    mell lc X QL J /\
+    mell lc X QL K
+.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Structure
+
+Theorem mell_is : forall FV X QL L,
+  mell FV X QL L ->
+  is_nat X /\ is_list QL /\ is_list L.
+induction on 1. intros. case H1.
+  apply adj_3_is_list to H4. search.
+  apply IH to H5. apply adj_3_is_list to H2. search.
+  search.
+  apply IH to H5. apply adj_3_is_list to H2. search.
+  apply IH to H3. apply adj_3_is_list to H2. search.
+  apply IH to H2. case H5. search.
+  apply IH to H4. apply adj_3_is_list to H2. apply adj_1_is_list to H3. search.
+  apply IH to H4. apply adj_1_is_list to H3. search.
+  apply IH to H6. apply merge_3_is_list to H2. search.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Height weakening
+
+Theorem mell_weaken_height : forall FV X Y QL L,
+  mell FV X QL L ->
+  leq X Y ->
+  mell FV Y QL L.
+induction on 1. intros. case H1.
+  case H2. apply leq_2_is_nat to H6. search.
+  case H2. apply IH to *H6 H9. apply IH to *H8 H9. search.
+  case H2. apply leq_2_is_nat to H5. search.
+  case H2. apply IH to *H6 H7. search.
+  case H2. apply IH to *H4 H5. search.
+  case H2. apply IH to *H3 H4. search.
+  case H2. apply IH to *H5 H6. search.
+  case H2. apply IH to *H5 H6. search.
+  case H2. apply IH to *H7 H9. apply IH to *H8 H9. search.
+
+Theorem mell_equalize_height : forall FV X QK K Y QL L,
+  mell FV X QK K ->
+  mell FV Y QL L ->
+  exists Z, mell FV Z QK K /\ mell FV Z QL L.
+intros. apply mell_is to H1. apply mell_is to H2.
+apply max_exists to H3 H6. apply max_leq to H9.
+apply mell_weaken_height to H1 H10.
+apply mell_weaken_height to H2 H11.
+search.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Theorem mell_perm_q : forall QK QL L,
+  mell QK L ->
+  perm QK QL ->
+  mell QL L.
+induction on 1. intros. case H1.
+  search.
+  apply IH to H6 H2. apply IH to H8 H2. search.
+  search.
+  apply IH to H6 H2. search.
+  apply IH to H4 H2. search.
+  apply IH to H3 H2. search.
+  Ht : assert 0 exists QL1, adj QL A QL1.
+    apply perm_2_is_list to H2. apply adj_2_is_o to H4.
+    apply adj_exists to H7 H6. search.
+    case Ht.
+   apply adj_preserves_perm to H4 H6 H2.
+   apply IH to H5 H7. search.
+  apply IH to H5 H2.
+   apply adj_perm to H2 H3. search.
+
+Theorem adj_nil_1 : forall A L, adj nil A L -> L = A :: nil.
+intros. case H1. search.
+
+Theorem perm_nil_1 : forall L, perm nil L -> L = nil.
+intros. case H1. search. case H2.
+
+Theorem mell_perm_l : forall QL K L,
+  mell QL K ->
+  perm K L ->
+  mell QL L.
+induction on 1. intros. case H1.
+  apply adj_perm_full to H2 H3.
+   apply perm_cons_1 to *H5. case H7. case H6.
+   search.  case H8.
+
+  apply adj_perm_full to *H2 *H3.
+   apply perm_merge_3 to *H4 H10.
+   search.
+
+  apply perm_cons_1 to *H2. case H4. case H3. search.
+    case H5.
+
+  apply adj_perm_full to *H2 *H3. unfold 4.
+    witness A, B, KK. split. search.
+    apply adj_2_is_o to H4. apply adj_1_is_list to H7.
+    apply adj_exists to *H9 *H10.
+    witness M. split. search.
+    apply adj_preserves_perm to *H4 H11 *H8.
+    apply adj_2_is_o to H5. apply perm_2_is_list to H12.
+    apply adj_exists to *H13 *H14.
+    witness M1. split. search.
+    apply adj_preserves_perm to *H5 H15 *H12.
+    backchain IH.
+
+  apply adj_perm_full to *H2 *H3. unfold 5.
+    witness KK. split. search.
+    backchain IH.
+
+  apply perm_cons_1 to *H2. apply perm_nil_1 to *H5. case H4.
+   search.
+
+  apply adj_perm_full to *H2 *H3. unfold 7.
+    witness A, KK. split. search.
+    witness QK. split. search.
+    backchain IH.
+
+  unfold 8. witness A, QK. split. search.
+    apply adj_2_is_o to H3. apply perm_2_is_list to H2.
+    apply adj_exists to *H6 *H7.
+    apply adj_preserves_perm to *H4 H8 *H2.
+    witness M. split. search.
+    backchain IH.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Set subgoals off.
+
+Define incl : olist -> olist -> prop by
+  incl J L := exists K, merge J K L.
+
+Theorem cut_admit :
+  (forall A B JJ J QJ KK K QK LL,
+     dual A B ->
+     adj JJ A J -> mell QJ J ->
+     adj KK B K -> mell QK K ->
+     merge JJ KK LL ->
+     incl QJ QK ->
+     mell QK LL)
+/\
+  (forall A B QJ QK K QQ,
+     dual A B ->
+     mell QJ (A :: nil) ->
+     adj QK B QQ -> mell QQ K ->
+     incl QJ QK ->
+     mell QK K).
+IHrk1 : induction on 1 1.
+IHht1 : induction on 3 2.
+IHqc1 : induction on 5 4.
+split.
+
+%% linear cuts
+skip.
+
+%% unbounded cuts
+intros. case H4.
+  search.
+  apply IHqc2 to H1 H2 H3 *H9 H5.
+   apply IHqc2 to H1 H2 H3 *H11 H5.
+   search.
+  search.
+  apply IHqc2 to H1 H2 H3 *H9 H5.
+   search.
+  apply IHqc2 to H1 H2 H3 *H7 H5.
+   search.
+  apply IHqc2 to H1 H2 H3 *H6 H5.
+   search.
+  apply adj_swap to *H3 *H7.
+   assert 0 incl QJ U.
+     case H5. apply adj_2_is_o to H9. apply merge_2_is_list to H11.
+     search.
+   apply IHqc2 to H1 H2 H10 *H8 H11.
+   search.
+  apply adj_same_result_diff to H3 H6. case H9.
+    apply IHqc2 to H1 H2 H3 *H8 H5.
+abort.

@@ -91,7 +91,7 @@ Define mell : flav -> nat -> olist -> olist -> prop by
     exists JJ KK, merge JJ KK L /\
     exists A B, dual A B /\
     exists J, adj JJ A J /\
-    exists K, adj KK A K /\
+    exists K, adj KK B K /\
     mell lc X QL J /\
     mell lc X QL K
 .
@@ -142,15 +142,48 @@ apply mell_weaken_height to H2 H11.
 search.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Unbounded context weakening
 
-Theorem mell_perm_q : forall QK QL L,
-  mell QK L ->
+Theorem mell_weaken_q : forall FV X QJ QK QL J,
+  mell FV X QJ J ->
+  merge QJ QK QL ->
+  mell FV X QL J.
+induction on 1. intros. apply merge_3_is_list to H2. case H1.
+  search.
+  apply IH to *H7 H2. apply IH to *H9 H2. search.
+  search.
+  apply IH to *H7 H2. search.
+  apply IH to *H5 H2. search.
+  apply IH to *H4 H2. search.
+  apply adj_2_is_o to H5. apply adj_exists to H7 H3.
+   assert merge QK1 QK M.
+   apply IH to *H6 H9.
+   search.
+  apply IH to *H6 H2. apply merge_unadj_1 to H2 H4.
+   search.
+  apply IH to *H8 H2. apply IH to *H9 H2. search.
+
+Theorem mell_weaken_q1 : forall FV X QJ J A QL,
+  mell FV X QJ J ->
+  adj QJ A QL ->
+  mell FV X QL J.
+intros. assert merge QJ (A :: nil) QL.
+  apply adj_2_is_o to H2.
+   apply adj_1_is_list to H2.
+   apply merge_nil_equal to H4. apply merge_sym to *H5.
+   search.
+  backchain mell_weaken_q.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Theorem mell_perm_q : forall FV X QK QL L,
+  mell FV X QK L ->
   perm QK QL ->
-  mell QL L.
+  mell FV X QL L.
 induction on 1. intros. case H1.
-  search.
+  apply perm_2_is_list to H2. search.
   apply IH to H6 H2. apply IH to H8 H2. search.
-  search.
+  apply perm_2_is_list to H2. search.
   apply IH to H6 H2. search.
   apply IH to H4 H2. search.
   apply IH to H3 H2. search.
@@ -162,6 +195,7 @@ induction on 1. intros. case H1.
    apply IH to H5 H7. search.
   apply IH to H5 H2.
    apply adj_perm to H2 H3. search.
+  apply IH to *H7 H2. apply IH to *H8 H2. search.
 
 Theorem adj_nil_1 : forall A L, adj nil A L -> L = A :: nil.
 intros. case H1. search.
@@ -169,21 +203,21 @@ intros. case H1. search.
 Theorem perm_nil_1 : forall L, perm nil L -> L = nil.
 intros. case H1. search. case H2.
 
-Theorem mell_perm_l : forall QL K L,
-  mell QL K ->
+Theorem mell_perm_l : forall FV X QL K L,
+  mell FV X QL K ->
   perm K L ->
-  mell QL L.
+  mell FV X QL L.
 induction on 1. intros. case H1.
-  apply adj_perm_full to H2 H3.
-   apply perm_cons_1 to *H5. case H7. case H6.
-   search.  case H8.
+  apply adj_perm_full to H2 H5.
+   apply perm_cons_1 to *H7. apply perm_nil_1 to *H9. case H8.
+   search.
 
   apply adj_perm_full to *H2 *H3.
    apply perm_merge_3 to *H4 H10.
    search.
 
-  apply perm_cons_1 to *H2. case H4. case H3. search.
-    case H5.
+  apply perm_cons_1 to *H2. apply perm_nil_1 to *H6. case H5.
+    search.
 
   apply adj_perm_full to *H2 *H3. unfold 4.
     witness A, B, KK. split. search.
@@ -216,55 +250,85 @@ induction on 1. intros. case H1.
     witness M. split. search.
     backchain IH.
 
+  apply perm_merge_3 to *H3 *H2. search.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Set subgoals off.
 
-Define incl : olist -> olist -> prop by
-  incl J L := exists K, merge J K L.
-
-Theorem cut_admit :
-  (forall A B JJ J QJ KK K QK LL,
-     dual A B ->
-     adj JJ A J -> mell QJ J ->
-     adj KK B K -> mell QK K ->
-     merge JJ KK LL ->
-     incl QJ QK ->
-     mell QK LL)
-/\
-  (forall A B QJ QK K QQ,
-     dual A B ->
-     mell QJ (A :: nil) ->
-     adj QK B QQ -> mell QQ K ->
-     incl QJ QK ->
-     mell QK K).
-IHrk1 : induction on 1 1.
-IHht1 : induction on 3 2.
-IHqc1 : induction on 5 4.
-split.
-
-%% linear cuts
-skip.
-
-%% unbounded cuts
-intros. case H4.
+Theorem cut_reduce_weight : forall A B X QJ Y QL L,
+  dual A B ->
+  mell lc X QJ (A :: nil) ->
+  adj QJ B QL -> mell lc Y QL L ->
+  exists Z, mell lc Z QJ L.
+induction on 4. intros. apply adj_1_is_list to H3. case H4.
   search.
-  apply IHqc2 to H1 H2 H3 *H9 H5.
-   apply IHqc2 to H1 H2 H3 *H11 H5.
+  apply IH to H1 H2 H3 *H9. apply IH to H1 H2 H3 *H11.
+   apply mell_equalize_height to *H12 *H13.
    search.
   search.
-  apply IHqc2 to H1 H2 H3 *H9 H5.
-   search.
-  apply IHqc2 to H1 H2 H3 *H7 H5.
-   search.
-  apply IHqc2 to H1 H2 H3 *H6 H5.
-   search.
+  apply IH to H1 H2 H3 *H9. search.
+  apply IH to H1 H2 H3 *H7. search.
+  apply IH to H1 H2 H3 *H6. search.
   apply adj_swap to *H3 *H7.
-   assert 0 incl QJ U.
-     case H5. apply adj_2_is_o to H9. apply merge_2_is_list to H11.
-     search.
-   apply IHqc2 to H1 H2 H10 *H8 H11.
+   apply mell_weaken_q1 to *H2 H9.
+   apply IH to H1 H11 H10 *H8.
    search.
   apply adj_same_result_diff to H3 H6. case H9.
-    apply IHqc2 to H1 H2 H3 *H8 H5.
-abort.
+    apply mell_perm_q to *H2 H10.
+     apply IH to H1 H11 H6 *H8.
+     apply mell_equalize_height to *H11 *H12.
+     apply adj_1_is_list to H7.
+     apply merge_nil_equal to *H15.
+     apply dual_is to H1.
+     assert 0 mell lc (s Z1) QK L. unfold 9.
+       witness nil, L. split. search.
+       witness A, A1. split. search.
+       witness A :: nil. split. search.
+       witness J. split. search. search. search.
+       apply perm_sym to *H10.
+       apply mell_perm_q to *H19 H20. search.
+    rename KK to QKK. apply adj_swap to *H10 *H6.
+     apply adj_same_result to H3 H12.
+     apply mell_perm_q to *H2 H13.
+     apply IH to H1 H14 H12 H8.
+     apply perm_sym to *H13. apply mell_perm_q to *H15 H16.
+     apply adj_perm_full to H16 H11.
+     search.
+   apply IH to H1 H2 H3 *H10.
+    apply IH to H1 H2 H3 *H11.
+    apply mell_equalize_height to *H12 *H13.
+    search.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Nested induction
+
+Theorem cut_admit : forall A B QL X JJ J Y KK K LL,
+  dual A B ->
+  adj JJ A J -> mell cf X QL J ->
+  adj KK B K -> mell cf Y QL K ->
+  merge JJ KK LL ->
+  exists Z, mell cf Z QL LL.
+IHrk : induction on 1.
+IHht : induction on 3.
+intros.
+Hqc : assert forall Y K QQ,
+  JJ = nil ->
+  adj QL B QQ -> mell cf Y QQ K ->
+  exists Z, mell cf Z QL K.
+clear H4 H5 H6 KK K Y LL.
+clear -> H3 H2 H1 J JJ QL B A.
+IHqc : induction on 5. intros. skip.
+
+case H3.
+  skip. %% id
+  skip. %% tensor
+  skip. %% one
+  skip. %% par
+  skip. %% bot
+
+  %% bang
+  Ht : assert JJ = nil /\ A = bang A1.
+    case H2. search. case H9.
+    case Ht.
+  case H1.
